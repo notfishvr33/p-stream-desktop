@@ -1,7 +1,8 @@
-const { app, BrowserWindow, session, ipcMain } = require('electron');
+const { app, BrowserWindow, session, ipcMain, dialog, Notification } = require('electron');
 const path = require('path');
 const { handlers, setupInterceptors } = require('./ipc-handlers');
 const DiscordRPC = require('discord-rpc');
+const { autoUpdater } = require('electron-updater');
 
 const clientId = '1451640447993774232';
 DiscordRPC.register(clientId);
@@ -79,6 +80,73 @@ function createWindow() {
   // mainWindow.webContents.openDevTools();
 }
 
+// Auto-updater configuration
+autoUpdater.autoDownload = false; // Don't auto-download, let user choose
+autoUpdater.autoInstallOnAppQuit = true; // Auto-install when app quits
+
+// Auto-updater event handlers
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info.version);
+  dialog.showMessageBox(BrowserWindow.getFocusedWindow() || null, {
+    type: 'info',
+    title: 'Update Available',
+    message: `A new version (${info.version}) of P-Stream is available!`,
+    detail: 'Would you like to download and install it now?',
+    buttons: ['Download', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then(result => {
+    if (result.response === 0) { // Download button
+      autoUpdater.downloadUpdate();
+
+      // Show download progress notification
+      if (Notification.isSupported()) {
+        new Notification({
+          title: 'Downloading Update',
+          body: 'P-Stream update is being downloaded...'
+        }).show();
+      }
+    }
+  }).catch(console.error);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('Update not available. Current version:', info.version);
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Update error:', err);
+  dialog.showErrorBox('Update Check Failed', 'Unable to check for updates. Please check your internet connection and try again later.');
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  console.log(log_message);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info.version);
+  dialog.showMessageBox(BrowserWindow.getFocusedWindow() || null, {
+    type: 'info',
+    title: 'Update Downloaded',
+    message: `P-Stream ${info.version} has been downloaded!`,
+    detail: 'The update will be installed when you restart the application.',
+    buttons: ['Restart Now', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then(result => {
+    if (result.response === 0) { // Restart Now button
+      autoUpdater.quitAndInstall();
+    }
+  }).catch(console.error);
+});
+
 rpc.on('ready', () => {
   console.log('Discord RPC started');
   setActivity(null);
@@ -99,6 +167,30 @@ app.whenReady().then(async () => {
   setupInterceptors(session.defaultSession);
 
   createWindow();
+
+  // Check for updates (only in production)
+  if (!app.isPackaged) {
+    console.log('Running in development mode, skipping update check');
+  } else {
+    // Check for updates after a short delay to let the app fully load
+    setTimeout(() => {
+      autoUpdater.checkForUpdates();
+    }, 3000);
+  }
+
+  // IPC handler for manual update check
+  ipcMain.handle('checkForUpdates', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return {
+        updateAvailable: result.updateInfo ? true : false,
+        version: result.updateInfo?.version || app.getVersion()
+      };
+    } catch (error) {
+      console.error('Manual update check failed:', error);
+      return { error: error.message };
+    }
+  });
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

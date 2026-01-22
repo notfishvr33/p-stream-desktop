@@ -36,5 +36,6 @@ The built files will be available in the `dist/` directory.
 
 - Native desktop wrapper for P-Stream
 - Enhanced streaming capabilities via browser extension
+- Automatic update checking from GitHub releases
 - Discord Rich Presence integration
 - Cross-platform support (macOS, Windows, Linux)
