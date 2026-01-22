@@ -34,7 +34,7 @@ async function setActivity(title) {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1300,
     height: 800,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'logo.png'),
