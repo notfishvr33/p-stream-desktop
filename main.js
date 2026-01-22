@@ -1,26 +1,25 @@
 const { app, BrowserWindow, session, ipcMain } = require('electron');
 const path = require('path');
 const { handlers, setupInterceptors } = require('./ipc-handlers');
-// const DiscordRPC = require('discord-rpc');
+const DiscordRPC = require('discord-rpc');
 
 const clientId = '1451640447993774232';
-// DiscordRPC.register(clientId);
+DiscordRPC.register(clientId);
 
-// const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+const rpc = new DiscordRPC.Client({ transport: 'ipc' });
 const startTimestamp = new Date();
 
 async function setActivity(title) {
-  // if (!rpc) return;
+  if (!rpc) return;
 
   let details = 'Not watching anything';
-  let state = 'https://pstream.mov';
+  let state = 'P-Stream is goated af';
 
   if (title && title !== 'P-Stream') {
     details = `Watching: ${title}`;
-    state = 'https://pstream.mov';
+    state = 'P-Stream is goated af';
   }
 
-  /*
   rpc.setActivity({
     details: details,
     state: state,
@@ -28,8 +27,8 @@ async function setActivity(title) {
     largeImageKey: 'logo',
     largeImageText: 'P-Stream',
     instance: false,
+    buttons: [{ label: 'Use P-Stream', url: 'https://pstream.mov/' }]
   }).catch(console.error);
-  */
 }
 
 function createWindow() {
@@ -80,10 +79,10 @@ function createWindow() {
   // mainWindow.webContents.openDevTools();
 }
 
-// rpc.on('ready', () => {
-//   console.log('Discord RPC started');
-//   setActivity(null);
-// });
+rpc.on('ready', () => {
+  console.log('Discord RPC started');
+  setActivity(null);
+});
 
 app.whenReady().then(async () => {
   // Register IPC handlers
@@ -107,4 +106,4 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// rpc.login({ clientId }).catch(console.error);
+rpc.login({ clientId }).catch(console.error);
