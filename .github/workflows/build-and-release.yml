@@ -37,6 +37,14 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Checking pnpm installation..."
+          which pnpm || echo "pnpm not in PATH"
+          pnpm --version || echo "pnpm command failed"
+          echo "PATH: $PATH"
 
       - name: Install dependencies
         run: |
@@ -79,6 +87,14 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Checking pnpm installation..."
+          which pnpm || echo "pnpm not in PATH"
+          pnpm --version || echo "pnpm command failed"
+          echo "PATH: $PATH"
 
       - name: Install dependencies
         run: |
@@ -122,6 +138,14 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify pnpm installation
+        run: |
+          echo "Checking pnpm installation..."
+          which pnpm || echo "pnpm not in PATH"
+          pnpm --version || echo "pnpm command failed"
+          echo "PATH: $PATH"
 
       - name: Install dependencies
         run: |
