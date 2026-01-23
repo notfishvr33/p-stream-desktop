@@ -27,24 +27,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Ensure latest npm and install pnpm
-        run: |
-          npm install -g npm
-          npm install -g pnpm
-          echo "$(npm bin -g)" >> $GITHUB_PATH
-
-      - name: Verify pnpm installation
-        run: pnpm --version
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: |
           pnpm config set fund false
-          pnpm install --frozen-lockfile --reporter=append-only
+          pnpm install --frozen-lockfile
 
       - name: Build Linux ${{ matrix.arch }}
         run: |
@@ -115,24 +112,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Ensure latest npm and install pnpm
-        run: |
-          npm install -g npm
-          npm install -g pnpm
-          echo "$(npm bin -g)" >> $GITHUB_PATH
-
-      - name: Verify pnpm installation
-        run: pnpm --version
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: |
           pnpm config set fund false
-          pnpm install --frozen-lockfile --reporter=append-only
+          pnpm install --frozen-lockfile
 
       - name: Build macOS ${{ matrix.arch }}
         run: |
