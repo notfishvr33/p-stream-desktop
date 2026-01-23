@@ -67,12 +67,13 @@
       "artifactName": "${productName} Setup ${version}.${ext}",
       "runAfterFinish": true,
       "language": "1033",
-      "includeUninstaller": true,
       "allowElevation": false,
       "warningsAsErrors": false,
       "differentialPackage": false,
       "multiLanguageInstaller": false,
-      "packElevateHelper": false
+      "packElevateHelper": false,
+      "installerIcon": null,
+      "uninstallerIcon": null
     }
   }
 }
