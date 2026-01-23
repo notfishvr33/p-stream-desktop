@@ -35,13 +35,17 @@ async function setActivity(title) {
 
 function createWindow() {
   const TITLE_BAR_HEIGHT = 40;
+  // Allow platform override via environment variable for previewing different platforms
+  const platform = process.env.PLATFORM_OVERRIDE || process.platform;
+  const isMac = platform === 'darwin';
+  const isLinux = platform === 'linux';
 
-  const mainWindow = new BrowserWindow({
+  // Configure window based on platform
+  const windowOptions = {
     width: 1300,
     height: 800,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'logo.png'),
-    frame: false,
     backgroundColor: '#1f2025',
     webPreferences: {
       nodeIntegration: false,
@@ -49,7 +53,19 @@ function createWindow() {
       preload: path.join(__dirname, 'preload-titlebar.js')
     },
     title: 'P-Stream'
-  });
+  };
+
+  if (isMac) {
+    // macOS: Use hidden title bar with native traffic lights
+    windowOptions.frame = false;
+    windowOptions.titleBarStyle = 'hiddenInset';
+    windowOptions.trafficLightPosition = { x: 12, y: 12 };
+  } else {
+    // Windows and Linux: Use frameless window with custom buttons
+    windowOptions.frame = false;
+  }
+
+  const mainWindow = new BrowserWindow(windowOptions);
 
   // Remove the menu entirely
   mainWindow.setMenu(null);
@@ -107,6 +123,7 @@ function createWindow() {
   mainWindow.webContents.once('did-finish-load', () => {
     mainWindow.webContents.send('title-changed', mainWindow.getTitle());
     mainWindow.webContents.send('window-maximized', mainWindow.isMaximized());
+    mainWindow.webContents.send('platform-changed', platform);
   });
 
   // Optional: Open DevTools

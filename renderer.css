@@ -111,3 +111,30 @@ body {
 .window-btn.is-maximized .icon-max {
   display: none;
 }
+
+/* macOS: Hide custom buttons, window title, and logo, native traffic lights overlay */
+body[data-platform="darwin"] .titlebar__right {
+  display: none;
+}
+
+body[data-platform="darwin"] .window-title {
+  display: none;
+}
+
+body[data-platform="darwin"] .app-icon {
+  display: none;
+}
+
+body[data-platform="darwin"] .titlebar {
+  padding-left: 80px; /* Make room for native traffic lights */
+}
+
+/* Linux: Keep custom buttons with chevron icons */
+body[data-platform="linux"] .titlebar {
+  /* Linux-specific styling if needed */
+}
+
+/* Windows: Keep default Windows-style icons */
+body[data-platform="win32"] .titlebar {
+  /* Windows-specific styling if needed */
+}
