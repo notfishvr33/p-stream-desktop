@@ -116,11 +116,35 @@ autoUpdater.on('update-available', (info) => {
 
 autoUpdater.on('update-not-available', (info) => {
   console.log('Update not available. Current version:', info.version);
+  // Silently handle - user is already on latest version, no action needed
 });
 
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
-  dialog.showErrorBox('Update Check Failed', 'Unable to check for updates. Please check your internet connection and try again later.');
+  // Only show error dialog for actual failures, not for "already up to date" scenarios
+  // Check if it's a network/API error vs. just no update available
+  const errorMessage = err.message || err.toString().toLowerCase();
+  const isNetworkError = errorMessage.includes('enotfound') || 
+                         errorMessage.includes('econnrefused') ||
+                         errorMessage.includes('etimedout') ||
+                         errorMessage.includes('network') ||
+                         errorMessage.includes('connection') ||
+                         errorMessage.includes('fetch') ||
+                         errorMessage.includes('timeout');
+  
+  // Don't show errors for "no update available" scenarios
+  const isNoUpdateError = errorMessage.includes('no update available') ||
+                          errorMessage.includes('already latest') ||
+                          errorMessage.includes('404') ||
+                          errorMessage.includes('not found');
+  
+  // Only show dialog for actual network/API errors, not for "no update" scenarios
+  if (isNetworkError && !isNoUpdateError) {
+    dialog.showErrorBox('Update Check Failed', 'Unable to check for updates. Please check your internet connection and try again later.');
+  } else {
+    // For "no update available" or minor errors, just log silently
+    console.log('Update check completed (no update available):', err.message || err.toString());
+  }
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
