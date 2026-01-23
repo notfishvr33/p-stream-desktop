@@ -56,7 +56,6 @@ function createWindow() {
   // Allow platform override via environment variable for previewing different platforms
   const platform = process.env.PLATFORM_OVERRIDE || process.platform;
   const isMac = platform === 'darwin';
-  const isLinux = platform === 'linux';
 
   // Configure window based on platform
   const windowOptions = {
