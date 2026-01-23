@@ -12,11 +12,15 @@ Desktop app for P-Stream (movie-web) that provides enhanced streaming capabiliti
 
 ## Installation
 
+Download the latest [release](https://github.com/p-stream/p-stream-desktop/releases)
+
+For **MacOS** it will fail to open, go to Settings > Privacy and Security, and press `Open Anyway`. Confirm with password or Touch ID!
+
+## Development
+
 ```bash
 pnpm install
 ```
-
-## Development
 
 ```bash
 pnpm start
