@@ -89,6 +89,7 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Build Windows ${{ matrix.arch }}
+        shell: bash
         run: |
           if [ "${{ matrix.arch }}" = "x64" ]; then
             pnpm run build:win --x64
