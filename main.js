@@ -332,14 +332,59 @@ app.whenReady().then(async () => {
   // IPC handler for manual update check
   ipcMain.handle('checkForUpdates', async () => {
     try {
+      // In development mode, autoUpdater.checkForUpdates() returns null
+      if (!app.isPackaged) {
+        return {
+          updateAvailable: false,
+          version: app.getVersion(),
+          isDevelopment: true,
+          message: 'Update checking is not available in development mode',
+        };
+      }
+
       const result = await autoUpdater.checkForUpdates();
+
+      // Handle null result (can happen if update check is skipped)
+      if (!result) {
+        return {
+          updateAvailable: false,
+          version: app.getVersion(),
+          message: 'Unable to check for updates at this time',
+        };
+      }
+
+      // Check if updateInfo exists
+      if (result.updateInfo) {
+        return {
+          updateAvailable: true,
+          version: result.updateInfo.version,
+        };
+      }
+
+      // No update available
       return {
-        updateAvailable: result.updateInfo ? true : false,
-        version: result.updateInfo?.version || app.getVersion(),
+        updateAvailable: false,
+        version: app.getVersion(),
       };
     } catch (error) {
       console.error('Manual update check failed:', error);
-      return { error: error.message };
+
+      // Provide user-friendly error messages
+      const errorMessage = error.message || error.toString().toLowerCase();
+      let userMessage = 'Unable to check for updates';
+
+      if (errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('fetch')) {
+        userMessage = 'Network error. Please check your internet connection.';
+      } else if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        userMessage = 'Update server not found.';
+      } else {
+        userMessage = `Update check failed: ${error.message || 'Unknown error'}`;
+      }
+
+      return {
+        error: userMessage,
+        version: app.getVersion(),
+      };
     }
   });
 
@@ -404,6 +449,11 @@ ipcMain.handle('set-discord-rpc-enabled', async (event, enabled) => {
   }
 
   return true;
+});
+
+// IPC handler for getting app version
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
 });
 
 app.on('window-all-closed', function () {

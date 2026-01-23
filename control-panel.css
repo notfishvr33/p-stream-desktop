@@ -148,3 +148,35 @@ body {
 .control-panel__content::-webkit-scrollbar-thumb:hover {
   background: #4d4d54;
 }
+
+/* Button Styles */
+.control-panel__button {
+  padding: 8px 16px;
+  background: #5865f2;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.control-panel__button:hover {
+  background: #4752c4;
+}
+
+.control-panel__button:active {
+  background: #3c45a5;
+}
+
+.control-panel__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-panel__button:disabled:hover {
+  background: #5865f2;
+}
