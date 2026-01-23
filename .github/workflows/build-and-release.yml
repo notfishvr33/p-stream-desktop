@@ -21,6 +21,8 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,6 +64,8 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -103,6 +107,8 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
