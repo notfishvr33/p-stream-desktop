@@ -159,7 +159,9 @@ body {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -179,4 +181,20 @@ body {
 
 .control-panel__button:disabled:hover {
   background: #5865f2;
+}
+
+.control-panel__button--danger {
+  background: #ef4444;
+}
+
+.control-panel__button--danger:hover {
+  background: #dc2626;
+}
+
+.control-panel__button--danger:active {
+  background: #b91c1c;
+}
+
+.control-panel__button--danger:disabled:hover {
+  background: #ef4444;
 }

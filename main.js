@@ -17,6 +17,9 @@ let store = null;
 // Control panel window reference
 let controlPanelWindow = null;
 
+// BrowserView reference (for reset functionality)
+let mainBrowserView = null;
+
 // Store current activity title
 let currentActivityTitle = null;
 
@@ -104,6 +107,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+
+  // Store reference to BrowserView globally
+  mainBrowserView = view;
 
   mainWindow.setBrowserView(view);
 
@@ -454,6 +460,41 @@ ipcMain.handle('set-discord-rpc-enabled', async (event, enabled) => {
 // IPC handler for getting app version
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
+});
+
+// IPC handler for resetting the app
+ipcMain.handle('reset-app', async () => {
+  try {
+    // Clear local storage (settings)
+    if (store) {
+      store.clear();
+    }
+
+    // Clear cookies and storage from the BrowserView session
+    if (mainBrowserView && mainBrowserView.webContents) {
+      const viewSession = mainBrowserView.webContents.session;
+
+      // Clear cookies
+      await viewSession.clearStorageData({
+        storages: ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'websql', 'cachestorage', 'filesystem'],
+      });
+    }
+
+    // Also clear default session cookies (in case they're used elsewhere)
+    await session.defaultSession.clearStorageData({
+      storages: ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'websql', 'cachestorage', 'filesystem'],
+    });
+
+    // Reload the BrowserView to apply changes
+    if (mainBrowserView && mainBrowserView.webContents) {
+      mainBrowserView.webContents.reload();
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error resetting app:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 app.on('window-all-closed', function () {

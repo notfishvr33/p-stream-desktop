@@ -1,6 +1,7 @@
 const toggle = document.getElementById('discord-rpc-toggle');
 const versionText = document.getElementById('version-text');
 const checkUpdatesBtn = document.getElementById('check-updates-btn');
+const resetAppBtn = document.getElementById('reset-app-btn');
 
 // Load initial state
 async function loadState() {
@@ -82,6 +83,40 @@ checkUpdatesBtn.addEventListener('click', async () => {
     }, 5000);
   } finally {
     checkUpdatesBtn.disabled = false;
+  }
+});
+
+// Handle reset app button
+resetAppBtn.addEventListener('click', async () => {
+  // Confirm with user
+  const confirmed = confirm(
+    'Are you sure you want to reset the app? This will clear all local data and cookies. This action cannot be undone.',
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  resetAppBtn.disabled = true;
+  resetAppBtn.textContent = 'Resetting...';
+
+  try {
+    await window.controlPanel.resetApp();
+    resetAppBtn.textContent = 'Reset Complete';
+
+    // Show success message
+    alert('App has been reset successfully. The app will reload.');
+
+    // Reload the control panel after a short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  } catch (error) {
+    console.error('Failed to reset app:', error);
+    resetAppBtn.textContent = 'Reset App';
+    alert('Failed to reset app. Please try again.');
+  } finally {
+    resetAppBtn.disabled = false;
   }
 });
 
