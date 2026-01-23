@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain, dialog, Notification } = require('electron');
+const { app, BrowserWindow, BrowserView, session, ipcMain, dialog, Notification } = require('electron');
 const path = require('path');
 const { handlers, setupInterceptors } = require('./ipc-handlers');
 const DiscordRPC = require('discord-rpc');
@@ -32,19 +32,23 @@ async function setActivity(title) {
   }).catch(console.error);
 }
 
+
 function createWindow() {
+  const TITLE_BAR_HEIGHT = 40;
+
   const mainWindow = new BrowserWindow({
     width: 1300,
     height: 800,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'logo.png'),
+    frame: false,
+    backgroundColor: '#1f2025',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      persistSessionCookies: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload-titlebar.js')
     },
-    title: "P-Stream"
+    title: 'P-Stream'
   });
 
   // Remove the menu entirely
@@ -57,27 +61,57 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadURL('https://pstream.mov/');
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  const view = new BrowserView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      persistSessionCookies: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  mainWindow.setBrowserView(view);
+
+  const resizeView = () => {
+    const { width, height } = mainWindow.getContentBounds();
+    view.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: height - TITLE_BAR_HEIGHT });
+  };
+
+  resizeView();
+  view.setAutoResize({ width: true, height: true });
+
+  mainWindow.on('resize', resizeView);
+  mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true));
+  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false));
+
+  warmUpBackend();
+  view.webContents.loadURL('https://pstream.mov/');
 
   // Update title when page title changes
-  mainWindow.on('page-title-updated', (event, title) => {
+  view.webContents.on('page-title-updated', (event, title) => {
     event.preventDefault();
-    let displayTitle = title;
-    
+
     if (title === 'P-Stream') {
       mainWindow.setTitle('P-Stream');
       setActivity(null);
     } else {
-      // Assuming the title comes as "Movie Title - P-Stream" or just "Movie Title"
-      // If it's "Movie Title - P-Stream", we want "Movie Title"
       const cleanTitle = title.replace(' - P-Stream', '');
       mainWindow.setTitle(`${cleanTitle} - P-Stream`);
       setActivity(cleanTitle);
     }
+
+    mainWindow.webContents.send('title-changed', mainWindow.getTitle());
+  });
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.webContents.send('title-changed', mainWindow.getTitle());
+    mainWindow.webContents.send('window-maximized', mainWindow.isMaximized());
   });
 
   // Optional: Open DevTools
-  // mainWindow.webContents.openDevTools();
+  // view.webContents.openDevTools();
 }
 
 // Auto-updater configuration
@@ -219,6 +253,28 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+ipcMain.on('window-minimize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.minimize();
+});
+
+ipcMain.on('window-maximize-toggle', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  if (win.isMaximized()) win.unmaximize();
+  else win.maximize();
+});
+
+ipcMain.on('window-close', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.close();
+});
+
+ipcMain.on('theme-color', (event, color) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.webContents.send('theme-color', color);
 });
 
 app.on('window-all-closed', function () {

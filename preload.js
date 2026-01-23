@@ -42,3 +42,55 @@ window.addEventListener('message', async (event) => {
 // We don't need to expose anything via contextBridge if the site relies solely on window.postMessage
 // But just in case, we can log that we are ready.
 console.log('P-Stream Desktop Preload Loaded');
+
+let lastThemeColor = null;
+
+const getThemeColor = () => {
+  const body = document.body;
+  const root = document.documentElement;
+
+  const bodyColor = body ? getComputedStyle(body).backgroundColor : '';
+  const rootColor = root ? getComputedStyle(root).backgroundColor : '';
+
+  const isTransparent = (value) =>
+    !value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)';
+
+  if (!isTransparent(bodyColor)) return bodyColor;
+  if (!isTransparent(rootColor)) return rootColor;
+  return '#1f2025';
+};
+
+const sendThemeColor = () => {
+  const color = getThemeColor();
+  if (color && color !== lastThemeColor) {
+    lastThemeColor = color;
+    ipcRenderer.send('theme-color', color);
+  }
+};
+
+const observeThemeChanges = () => {
+  sendThemeColor();
+
+  const observer = new MutationObserver(() => {
+    sendThemeColor();
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+    subtree: true,
+  });
+
+  if (document.body) {
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+      subtree: true,
+    });
+  }
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+  observeThemeChanges();
+  setInterval(sendThemeColor, 2000);
+});

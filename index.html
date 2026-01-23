@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P-Stream</title>
+    <link rel="stylesheet" href="renderer.css" />
+  </head>
+  <body>
+    <div id="titlebar" class="titlebar" role="banner">
+      <div class="titlebar__left">
+        <div class="app-icon" aria-hidden="true"></div>
+        <div id="window-title" class="window-title">P-Stream</div>
+      </div>
+      <div class="titlebar__right">
+        <button id="minimize" class="window-btn" aria-label="Minimize">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="6" width="8" height="1.5" rx="0.75" /></svg>
+        </button>
+        <button id="maximize" class="window-btn" aria-label="Maximize">
+          <svg class="icon-max" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.25" y="2.25" width="7.5" height="7.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" /></svg>
+          <svg class="icon-restore" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 3h5a1 1 0 0 1 1 1v5" fill="none" stroke="currentColor" stroke-width="1.2" /><rect x="2" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" /></svg>
+        </button>
+        <button id="close" class="window-btn window-btn--close" aria-label="Close">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>
