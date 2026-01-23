@@ -76,10 +76,12 @@ jobs:
           node-version: '20'
 
       - name: Ensure latest npm and install pnpm
+        shell: pwsh
         run: |
           npm install -g npm
           npm install -g pnpm
-          echo "$(npm bin -g)" >> $GITHUB_PATH
+          $npmPath = npm bin -g
+          echo "$npmPath" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Verify pnpm installation
         run: pnpm --version
