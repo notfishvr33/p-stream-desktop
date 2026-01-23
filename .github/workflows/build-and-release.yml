@@ -27,24 +27,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Verify pnpm installation
-        run: |
-          echo "Checking pnpm installation..."
-          which pnpm || echo "pnpm not in PATH"
-          pnpm --version || echo "pnpm command failed"
-          echo "PATH: $PATH"
+        run: pnpm --version
 
       - name: Install dependencies
         run: |
@@ -77,24 +69,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Verify pnpm installation
-        run: |
-          echo "Checking pnpm installation..."
-          which pnpm || echo "pnpm not in PATH"
-          pnpm --version || echo "pnpm command failed"
-          echo "PATH: $PATH"
+        run: pnpm --version
 
       - name: Install dependencies
         run: |
@@ -128,24 +112,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Verify pnpm installation
-        run: |
-          echo "Checking pnpm installation..."
-          which pnpm || echo "pnpm not in PATH"
-          pnpm --version || echo "pnpm command failed"
-          echo "PATH: $PATH"
+        run: pnpm --version
 
       - name: Install dependencies
         run: |
