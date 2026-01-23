@@ -42,7 +42,9 @@ jobs:
         run: pnpm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm config set fund false
+          pnpm install --frozen-lockfile --reporter=append-only
 
       - name: Build Linux ${{ matrix.arch }}
         run: |
@@ -87,7 +89,13 @@ jobs:
         run: pnpm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        shell: pwsh
+        run: |
+          pnpm config set fund false
+          if (Test-Path pnpm-lock.yaml) {
+            Remove-Item pnpm-lock.yaml
+          }
+          pnpm install
 
       - name: Build Windows ${{ matrix.arch }}
         run: |
@@ -130,7 +138,9 @@ jobs:
         run: pnpm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm config set fund false
+          pnpm install --frozen-lockfile --reporter=append-only
 
       - name: Build macOS ${{ matrix.arch }}
         run: |
