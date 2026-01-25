@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-const VALID_CHANNELS = ['hello', 'makeRequest', 'prepareStream', 'openPage'];
+const VALID_CHANNELS = ['hello', 'makeRequest', 'prepareStream', 'openPage', 'updateMediaMetadata'];
 
 window.addEventListener('message', async (event) => {
   // Security check: only accept messages from the same window
@@ -18,29 +18,33 @@ window.addEventListener('message', async (event) => {
       // Forward to Main Process
       const response = await ipcRenderer.invoke(data.name, data.body);
 
-      // Send response back to window
-      window.postMessage(
-        {
-          name: data.name,
-          relayId: data.relayId,
-          instanceId: data.instanceId,
-          body: response,
-          relayed: true,
-        },
-        '*',
-      ); // Target origin * is okay here as we validated source === window
+      // Send response back to window (only if it's not a one-way update like updateMediaMetadata)
+      if (data.name !== 'updateMediaMetadata') {
+        window.postMessage(
+          {
+            name: data.name,
+            relayId: data.relayId,
+            instanceId: data.instanceId,
+            body: response,
+            relayed: true,
+          },
+          '*',
+        ); // Target origin * is okay here as we validated source === window
+      }
     } catch (error) {
       console.error(`[Preload] Error handling ${data.name}:`, error);
-      window.postMessage(
-        {
-          name: data.name,
-          relayId: data.relayId,
-          instanceId: data.instanceId,
-          body: { success: false, error: error.message },
-          relayed: true,
-        },
-        '*',
-      );
+      if (data.name !== 'updateMediaMetadata') {
+        window.postMessage(
+          {
+            name: data.name,
+            relayId: data.relayId,
+            instanceId: data.instanceId,
+            body: { success: false, error: error.message },
+            relayed: true,
+          },
+          '*',
+        );
+      }
     }
   }
 });

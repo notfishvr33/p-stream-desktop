@@ -9,7 +9,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['main.js', 'ipc-handlers.js', 'storage.js', 'test.js'],
+    files: ['main.js', 'ipc-handlers.js', 'storage.js', 'test.js', 'discord-rpc.js'],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module',

@@ -11,15 +11,9 @@ const {
 } = require('electron');
 const path = require('path');
 const { handlers, setupInterceptors } = require('./ipc-handlers');
-const DiscordRPC = require('discord-rpc');
 const { autoUpdater } = require('electron-updater');
 const SimpleStore = require('./storage');
-
-const clientId = '1451640447993774232';
-DiscordRPC.register(clientId);
-
-const rpc = new DiscordRPC.Client({ transport: 'ipc' });
-const startTimestamp = new Date();
+const discordRPC = require('./discord-rpc');
 
 // Settings store (will be initialized when app is ready)
 let store = null;
@@ -33,46 +27,6 @@ let downloadedUpdateVersion = null;
 
 // BrowserView reference (for reset functionality)
 let mainBrowserView = null;
-
-// Store current activity title
-let currentActivityTitle = null;
-
-function getStreamUrlForRPC() {
-  if (!store) return 'https://pstream.mov/';
-  const streamUrl = store.get('streamUrl', 'pstream.mov');
-  return streamUrl.startsWith('http://') || streamUrl.startsWith('https://') ? streamUrl : `https://${streamUrl}/`;
-}
-
-async function setActivity(title) {
-  if (!rpc) return;
-
-  // Check if Discord RPC is enabled (store might not be initialized yet)
-  if (store && !store.get('discordRPCEnabled', true)) {
-    // Clear activity if disabled
-    rpc.clearActivity().catch(console.error);
-    return;
-  }
-
-  let details = 'Not watching anything';
-  let state = 'P-Stream is goated af';
-
-  if (title && title !== 'P-Stream') {
-    details = `Watching: ${title}`;
-    state = 'P-Stream is goated af';
-  }
-
-  rpc
-    .setActivity({
-      details: details,
-      state: state,
-      startTimestamp,
-      largeImageKey: 'logo',
-      largeImageText: 'P-Stream',
-      instance: false,
-      buttons: [{ label: 'Use P-Stream', url: getStreamUrlForRPC() }],
-    })
-    .catch(console.error);
-}
 
 function createWindow() {
   const TITLE_BAR_HEIGHT = 40;
@@ -216,19 +170,153 @@ function createWindow() {
     }
   });
 
+  // Inject script to watch MediaSession API and video elements for Discord RPC
+  const injectMediaWatcher = () => {
+    const script = `
+      (function() {
+        if (window.__pstreamMediaWatcherInjected) return;
+        window.__pstreamMediaWatcherInjected = true;
+
+        let lastMetadata = null;
+        let lastProgress = null;
+        let updateInterval = null;
+
+        // Helper to convert relative URLs to absolute
+        const getAbsoluteUrl = (url) => {
+          if (!url) return null;
+          try {
+            // If already absolute, return as is
+            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+              return url;
+            }
+            // Convert relative to absolute
+            return new URL(url, window.location.href).href;
+          } catch (e) {
+            return url; // Return original if conversion fails
+          }
+        };
+
+        const sendMediaUpdate = () => {
+          try {
+            const metadata = navigator.mediaSession?.metadata;
+            const playbackState = navigator.mediaSession?.playbackState;
+            
+            // Find video element to get progress
+            const video = document.querySelector('video');
+            let currentTime = null;
+            let duration = null;
+            let isPlaying = false;
+
+            if (video && !isNaN(video.currentTime) && !isNaN(video.duration)) {
+              currentTime = video.currentTime;
+              duration = video.duration;
+              isPlaying = !video.paused;
+            }
+
+            // Extract metadata and convert poster URL to absolute
+            let posterUrl = null;
+            if (metadata?.artwork && metadata.artwork.length > 0) {
+              posterUrl = getAbsoluteUrl(metadata.artwork[0].src);
+            }
+
+            const currentMetadata = metadata ? {
+              title: metadata.title || null,
+              artist: metadata.artist || null,
+              poster: posterUrl
+            } : null;
+
+            const currentProgress = {
+              currentTime: currentTime !== null && !isNaN(currentTime) ? currentTime : null,
+              duration: duration !== null && !isNaN(duration) ? duration : null,
+              isPlaying,
+              playbackState
+            };
+
+            const metadataChanged = JSON.stringify(currentMetadata) !== JSON.stringify(lastMetadata);
+            const progressChanged = JSON.stringify(currentProgress) !== JSON.stringify(lastProgress);
+
+            if (metadataChanged || progressChanged) {
+              lastMetadata = currentMetadata;
+              lastProgress = currentProgress;
+
+              // Send to main process via window.postMessage (will be caught by preload)
+              window.postMessage({
+                name: 'updateMediaMetadata',
+                body: {
+                  metadata: currentMetadata,
+                  progress: currentProgress
+                }
+              }, '*');
+            }
+          } catch (e) {
+            console.error('[P-Stream Media Watcher]', e);
+          }
+        };
+
+        // Watch for MediaSession changes
+        if (navigator.mediaSession) {
+          // Intercept MediaSession.metadata setter to detect changes immediately
+          const originalMediaSession = navigator.mediaSession;
+          let currentMetadataValue = originalMediaSession.metadata;
+          
+          Object.defineProperty(navigator.mediaSession, 'metadata', {
+            get: function() {
+              return currentMetadataValue;
+            },
+            set: function(value) {
+              currentMetadataValue = value;
+              // Trigger update when metadata is set
+              setTimeout(sendMediaUpdate, 100);
+            },
+            configurable: true,
+            enumerable: true
+          });
+
+          // Poll for changes every 2 seconds (as backup)
+          updateInterval = setInterval(sendMediaUpdate, 2000);
+
+          // Also listen for video events
+          const videoEvents = ['play', 'pause', 'timeupdate', 'loadedmetadata', 'seeked', 'progress'];
+          videoEvents.forEach(event => {
+            document.addEventListener(event, sendMediaUpdate, true);
+          });
+
+          // Initial check after a short delay
+          setTimeout(sendMediaUpdate, 1000);
+        }
+      })();
+    `;
+
+    view.webContents.executeJavaScript(script).catch(console.error);
+  };
+
+  // Inject media watcher when page loads
+  view.webContents.on('did-finish-load', () => {
+    injectMediaWatcher();
+  });
+
+  // Also inject on navigation
+  view.webContents.on('did-navigate', () => {
+    setTimeout(injectMediaWatcher, 1000);
+  });
+
   // Update title when page title changes
   view.webContents.on('page-title-updated', (event, title) => {
     event.preventDefault();
 
     if (title === 'P-Stream') {
       mainWindow.setTitle('P-Stream');
-      currentActivityTitle = null;
-      setActivity(null);
+      discordRPC.setCurrentActivityTitle(null);
+      discordRPC.setCurrentMediaMetadata(null);
+      discordRPC.setActivity(null);
     } else {
       const cleanTitle = title.replace(' - P-Stream', '');
       mainWindow.setTitle(`${cleanTitle} - P-Stream`);
-      currentActivityTitle = cleanTitle;
-      setActivity(cleanTitle);
+      discordRPC.setCurrentActivityTitle(cleanTitle);
+      // Only use title if we don't have media metadata
+      if (!discordRPC.getCurrentMediaMetadata()) {
+        discordRPC.setActivity(cleanTitle);
+      }
     }
 
     mainWindow.webContents.send('title-changed', mainWindow.getTitle());
@@ -438,14 +526,6 @@ autoUpdater.on('update-downloaded', (info) => {
   }
 });
 
-rpc.on('ready', () => {
-  console.log('Discord RPC started');
-  // Only set activity if RPC is enabled (store might not be initialized yet)
-  if (!store || store.get('discordRPCEnabled', true)) {
-    setActivity(currentActivityTitle);
-  }
-});
-
 app.whenReady().then(async () => {
   // Set the app name
   app.setName('P-Stream');
@@ -457,6 +537,9 @@ app.whenReady().then(async () => {
       streamUrl: 'pstream.mov',
     },
   });
+
+  // Initialize Discord RPC
+  discordRPC.initialize(store);
 
   // Register IPC handlers
   Object.entries(handlers).forEach(([channel, handler]) => {
@@ -717,31 +800,6 @@ ipcMain.on('theme-color', (event, color) => {
   if (win) win.webContents.send('theme-color', color);
 });
 
-// IPC handlers for Discord RPC toggle
-ipcMain.handle('get-discord-rpc-enabled', () => {
-  if (!store) return true; // Default to enabled if store not initialized
-  return store.get('discordRPCEnabled', true);
-});
-
-ipcMain.handle('set-discord-rpc-enabled', async (event, enabled) => {
-  if (!store) return false;
-
-  store.set('discordRPCEnabled', enabled);
-
-  // Update activity immediately
-  if (enabled) {
-    // Use stored current activity title
-    await setActivity(currentActivityTitle);
-  } else {
-    // Clear activity if disabled
-    if (rpc) {
-      rpc.clearActivity().catch(console.error);
-    }
-  }
-
-  return true;
-});
-
 // IPC handler for getting app version
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
@@ -784,9 +842,7 @@ ipcMain.handle('set-stream-url', async (event, url) => {
   }
 
   // Update Discord RPC button URL
-  if (rpc && currentActivityTitle !== null) {
-    await setActivity(currentActivityTitle);
-  }
+  discordRPC.updateActivity();
 
   return true;
 });
@@ -830,5 +886,3 @@ ipcMain.handle('reset-app', async () => {
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
-
-rpc.login({ clientId }).catch(console.error);
