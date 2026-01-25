@@ -27,6 +27,12 @@ let mainBrowserView = null;
 // Store current activity title
 let currentActivityTitle = null;
 
+function getStreamUrlForRPC() {
+  if (!store) return 'https://pstream.mov/';
+  const streamUrl = store.get('streamUrl', 'pstream.mov');
+  return streamUrl.startsWith('http://') || streamUrl.startsWith('https://') ? streamUrl : `https://${streamUrl}/`;
+}
+
 async function setActivity(title) {
   if (!rpc) return;
 
@@ -53,7 +59,7 @@ async function setActivity(title) {
       largeImageKey: 'logo',
       largeImageText: 'P-Stream',
       instance: false,
-      buttons: [{ label: 'Use P-Stream', url: 'https://pstream.mov/' }],
+      buttons: [{ label: 'Use P-Stream', url: getStreamUrlForRPC() }],
     })
     .catch(console.error);
 }
@@ -141,7 +147,11 @@ function createWindow() {
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false));
 
-  view.webContents.loadURL('https://pstream.mov/');
+  // Get the saved stream URL or use default
+  const streamUrl = store ? store.get('streamUrl', 'pstream.mov') : 'pstream.mov';
+  const fullUrl =
+    streamUrl.startsWith('http://') || streamUrl.startsWith('https://') ? streamUrl : `https://${streamUrl}/`;
+  view.webContents.loadURL(fullUrl);
 
   // Update title when page title changes
   view.webContents.on('page-title-updated', (event, title) => {
@@ -381,6 +391,7 @@ app.whenReady().then(async () => {
   store = new SimpleStore({
     defaults: {
       discordRPCEnabled: true,
+      streamUrl: 'pstream.mov',
     },
   });
 
@@ -673,6 +684,50 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+// IPC handlers for stream URL
+ipcMain.handle('get-stream-url', () => {
+  if (!store) return 'pstream.mov';
+  return store.get('streamUrl', 'pstream.mov');
+});
+
+ipcMain.handle('set-stream-url', async (event, url) => {
+  if (!store) return false;
+
+  // Validate and normalize URL
+  let normalizedUrl = url.trim();
+
+  // Remove protocol if present (we'll add it when loading)
+  if (normalizedUrl.startsWith('http://')) {
+    normalizedUrl = normalizedUrl.replace('http://', '');
+  }
+  if (normalizedUrl.startsWith('https://')) {
+    normalizedUrl = normalizedUrl.replace('https://', '');
+  }
+
+  // Remove trailing slash
+  normalizedUrl = normalizedUrl.replace(/\/$/, '');
+
+  // Basic validation - should be a valid domain
+  if (!normalizedUrl || normalizedUrl.length === 0) {
+    throw new Error('URL cannot be empty');
+  }
+
+  store.set('streamUrl', normalizedUrl);
+
+  // Reload the BrowserView with the new URL if it exists
+  if (mainBrowserView && mainBrowserView.webContents) {
+    const fullUrl = `https://${normalizedUrl}/`;
+    mainBrowserView.webContents.loadURL(fullUrl);
+  }
+
+  // Update Discord RPC button URL
+  if (rpc && currentActivityTitle !== null) {
+    await setActivity(currentActivityTitle);
+  }
+
+  return true;
+});
+
 // IPC handler for resetting the app
 ipcMain.handle('reset-app', async () => {
   try {
@@ -696,9 +751,10 @@ ipcMain.handle('reset-app', async () => {
       storages: ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'websql', 'cachestorage', 'filesystem'],
     });
 
-    // Reload the BrowserView to apply changes
+    // Reload the BrowserView with the default URL
     if (mainBrowserView && mainBrowserView.webContents) {
-      mainBrowserView.webContents.reload();
+      const defaultUrl = 'https://pstream.mov/';
+      mainBrowserView.webContents.loadURL(defaultUrl);
     }
 
     return { success: true };

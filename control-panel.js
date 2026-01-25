@@ -2,6 +2,8 @@ const toggle = document.getElementById('discord-rpc-toggle');
 const versionText = document.getElementById('version-text');
 const checkUpdatesBtn = document.getElementById('check-updates-btn');
 const resetAppBtn = document.getElementById('reset-app-btn');
+const streamUrlInput = document.getElementById('stream-url-input');
+const saveUrlBtn = document.getElementById('save-url-btn');
 
 // Load initial state
 async function loadState() {
@@ -18,6 +20,13 @@ async function loadState() {
   } catch (error) {
     console.error('Failed to load version:', error);
     versionText.textContent = 'Unknown';
+  }
+
+  try {
+    const url = await window.controlPanel.getStreamUrl();
+    streamUrlInput.value = url;
+  } catch (error) {
+    console.error('Failed to load stream URL:', error);
   }
 }
 
@@ -198,6 +207,63 @@ async function handleRestartAndInstall() {
     checkUpdatesBtn.disabled = false;
   }
 }
+
+// Handle save URL button
+saveUrlBtn.addEventListener('click', async () => {
+  const url = streamUrlInput.value.trim();
+  
+  if (!url) {
+    alert('Please enter a valid URL');
+    return;
+  }
+
+  // Validate URL format (basic validation)
+  try {
+    // If it doesn't start with http:// or https://, add https://
+    let formattedUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      formattedUrl = `https://${url}`;
+    }
+    
+    // Validate URL format
+    new URL(formattedUrl);
+    
+    // Extract just the domain if full URL was provided, or use as-is if it's just a domain
+    let urlToSave = url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      const urlObj = new URL(url);
+      urlToSave = urlObj.hostname;
+    }
+    
+    saveUrlBtn.disabled = true;
+    saveUrlBtn.textContent = 'Saving...';
+    
+    try {
+      await window.controlPanel.setStreamUrl(urlToSave);
+      saveUrlBtn.textContent = 'Saved!';
+      
+      // Reset button text after a short delay
+      setTimeout(() => {
+        saveUrlBtn.textContent = 'Save';
+        saveUrlBtn.disabled = false;
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to save stream URL:', error);
+      saveUrlBtn.textContent = 'Save';
+      saveUrlBtn.disabled = false;
+      alert('Failed to save URL. Please try again.');
+    }
+  } catch (error) {
+    alert('Please enter a valid URL or domain name');
+  }
+});
+
+// Handle Enter key in URL input
+streamUrlInput.addEventListener('keypress', (event) => {
+  if (event.key === 'Enter') {
+    saveUrlBtn.click();
+  }
+});
 
 // Handle reset app button
 resetAppBtn.addEventListener('click', async () => {

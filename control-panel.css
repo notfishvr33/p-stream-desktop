@@ -198,3 +198,47 @@ body {
 .control-panel__button--danger:disabled:hover {
   background: #ef4444;
 }
+
+/* Input Styles */
+.control-panel__setting--input {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.control-panel__setting--input .control-panel__setting-info {
+  margin-right: 0;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.control-panel__input-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+
+.control-panel__input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #1f2025;
+  border: 1px solid #2d2d33;
+  border-radius: 6px;
+  color: #e4e4e7;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.control-panel__input:focus {
+  outline: none;
+  border-color: #5865f2;
+}
+
+.control-panel__input::placeholder {
+  color: #71717a;
+}
+
+.control-panel__input:hover {
+  border-color: #3d3d44;
+}
