@@ -28,6 +28,18 @@ async function loadState() {
   } catch (error) {
     console.error('Failed to load stream URL:', error);
   }
+
+  // Check if we're in development mode and show restart button instead
+  try {
+    const updateCheck = await window.controlPanel.checkForUpdates();
+    if (updateCheck.isDevelopment) {
+      checkUpdatesBtn.textContent = 'Restart App';
+      versionText.textContent = `v${updateCheck.version} (Dev Mode)`;
+    }
+  } catch (error) {
+    // Ignore errors when checking for dev mode
+    console.log('Could not determine if in dev mode:', error);
+  }
 }
 
 // Handle toggle change
@@ -60,7 +72,9 @@ checkUpdatesBtn.addEventListener('click', async () => {
   const buttonText = checkUpdatesBtn.textContent;
 
   // Handle different button states
-  if (buttonText === 'Install') {
+  if (buttonText === 'Restart App') {
+    await handleRestartApp();
+  } else if (buttonText === 'Install') {
     await handleInstallUpdate();
   } else if (buttonText === 'Install & Restart') {
     await handleRestartAndInstall();
@@ -90,12 +104,9 @@ async function handleCheckForUpdates() {
         }
       }, 5000);
     } else if (result.isDevelopment) {
-      // Development mode - show friendly message
-      versionText.textContent = result.message || 'Development mode';
-      checkUpdatesBtn.textContent = 'Check for Updates';
-      setTimeout(() => {
-        versionText.textContent = `v${result.version}`;
-      }, 3000);
+      // Development mode - show restart button instead
+      versionText.textContent = `v${result.version} (Dev Mode)`;
+      checkUpdatesBtn.textContent = 'Restart App';
     } else if (result.updateAvailable) {
       // Update available - show Install button
       updateAvailable = true;
@@ -170,6 +181,30 @@ async function handleInstallUpdate() {
     setTimeout(() => {
       versionText.textContent = `Update available: v${updateVersion}`;
     }, 3000);
+    checkUpdatesBtn.disabled = false;
+  }
+}
+
+async function handleRestartApp() {
+  checkUpdatesBtn.disabled = true;
+  checkUpdatesBtn.textContent = 'Restarting...';
+  versionText.textContent = 'Restarting application...';
+
+  try {
+    const result = await window.controlPanel.restartApp();
+    if (result.error) {
+      versionText.textContent = `Error: ${result.error}`;
+      checkUpdatesBtn.textContent = 'Restart App';
+      checkUpdatesBtn.disabled = false;
+    } else {
+      // App will restart, so this won't execute
+      versionText.textContent = 'Restarting...';
+      checkUpdatesBtn.textContent = 'Restarting...';
+    }
+  } catch (error) {
+    console.error('Failed to restart app:', error);
+    versionText.textContent = 'Error restarting app';
+    checkUpdatesBtn.textContent = 'Restart App';
     checkUpdatesBtn.disabled = false;
   }
 }

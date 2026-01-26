@@ -398,6 +398,58 @@ let isManualCheck = false;
 // Track if we're checking on startup (to handle pending updates)
 let isStartupCheck = false;
 
+// Helper function to install update and restart
+// This properly closes all windows and handles the installation
+function installAndRestart() {
+  if (!updateDownloaded) {
+    console.error('Cannot install: update not downloaded');
+    dialog.showErrorBox('Installation Error', 'Update is not downloaded yet. Please wait for download to complete.');
+    return;
+  }
+
+  console.log('Installing update and restarting...');
+  console.log('Update version:', downloadedUpdateVersion);
+
+  try {
+    // Close all windows first to ensure clean quit
+    const windows = BrowserWindow.getAllWindows();
+    console.log(`Closing ${windows.length} window(s) before installation...`);
+
+    windows.forEach((win) => {
+      // Remove close listeners that might prevent quitting
+      win.removeAllListeners('close');
+      win.destroy();
+    });
+
+    // Use setImmediate to ensure all windows are closed and dialogs are released
+    // This is especially important on macOS
+    setImmediate(() => {
+      try {
+        // Remove window-all-closed listener that might prevent quitting
+        app.removeAllListeners('window-all-closed');
+
+        console.log('Calling quitAndInstall...');
+        // false = isSilent (show installer UI), true = isForceRunAfter (restart app)
+        autoUpdater.quitAndInstall(false, true);
+      } catch (error) {
+        console.error('Error in quitAndInstall:', error);
+        // Fallback: try without force run after
+        try {
+          console.log('Trying fallback installation method...');
+          autoUpdater.quitAndInstall(false, false);
+        } catch (err2) {
+          console.error('Fallback installation also failed:', err2);
+          // Last resort: just quit and let autoInstallOnAppQuit handle it
+          app.quit();
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error preparing for installation:', error);
+    dialog.showErrorBox('Installation Error', `Failed to prepare for installation: ${error.message}`);
+  }
+}
+
 // Simple version comparison function (handles semantic versioning)
 function compareVersions(current, latest) {
   const currentParts = current.split('.').map(Number);
@@ -530,7 +582,7 @@ autoUpdater.on('update-downloaded', (info) => {
           if (result.response === 0) {
             // Install Now button - install and restart
             console.log('User chose to install update on startup');
-            autoUpdater.quitAndInstall(false, true);
+            installAndRestart();
           } else {
             // User chose Later - update will be available in control panel
             console.log('User chose to install update later');
@@ -557,11 +609,14 @@ autoUpdater.on('update-downloaded', (info) => {
       })
       .then((result) => {
         if (result.response === 0) {
-          // Restart Now button
-          autoUpdater.quitAndInstall(false, true);
+          // Restart Now button - close all windows and install
+          console.log('User chose to install update from dialog');
+          installAndRestart();
         }
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error('Error in update dialog:', error);
+      });
   }
 });
 
@@ -771,6 +826,19 @@ app.whenReady().then(async () => {
     };
   });
 
+  // IPC handler for restarting the app (useful in development mode)
+  ipcMain.handle('restartApp', () => {
+    try {
+      console.log('Restarting application...');
+      app.relaunch();
+      app.exit(0);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to restart app:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // IPC handler for installing updates (restart and install)
   ipcMain.handle('installUpdate', async () => {
     try {
@@ -788,28 +856,9 @@ app.whenReady().then(async () => {
         };
       }
 
-      console.log('Installing update and restarting...');
-      console.log('Update downloaded version:', downloadedUpdateVersion);
-      console.log('Calling quitAndInstall - app will restart and install update');
-
-      // quitAndInstall will:
-      // 1. Quit the application immediately
-      // 2. Run the installer (with UI since isSilent=false)
-      // 3. Restart the app after installation (since isForceRunAfter=true)
-      // Note: This call is synchronous and will cause the app to quit immediately
-      // The app will close, install the update, and then restart automatically
-      try {
-        autoUpdater.quitAndInstall(false, true); // false = isSilent (show installer UI), true = isForceRunAfter (restart app)
-      } catch (error) {
-        console.error('Error calling quitAndInstall:', error);
-        // If quitAndInstall fails, try without force run after
-        try {
-          autoUpdater.quitAndInstall(false, false);
-        } catch (err2) {
-          console.error('Error calling quitAndInstall (fallback):', err2);
-          throw err2;
-        }
-      }
+      console.log('Installing update via IPC handler...');
+      // Use the helper function to ensure proper installation
+      installAndRestart();
 
       // This return may not execute since quitAndInstall quits the app immediately
       // But we return it anyway for the IPC call

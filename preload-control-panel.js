@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('controlPanel', {
   downloadUpdate: () => ipcRenderer.invoke('downloadUpdate'),
   isUpdateDownloaded: () => ipcRenderer.invoke('isUpdateDownloaded'),
   installUpdate: () => ipcRenderer.invoke('installUpdate'),
+  restartApp: () => ipcRenderer.invoke('restartApp'),
   resetApp: () => ipcRenderer.invoke('reset-app'),
   onUpdateDownloaded: (callback) => {
     ipcRenderer.on('update-downloaded', (event, data) => callback(data));
