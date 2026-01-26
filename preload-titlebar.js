@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('windowControls', {
   onMaximizedChanged: (cb) => ipcRenderer.on('window-maximized', (_event, isMaximized) => cb(isMaximized)),
   onThemeColorChanged: (cb) => ipcRenderer.on('theme-color', (_event, color) => cb(color)),
   onPlatformChanged: (cb) => ipcRenderer.on('platform-changed', (_event, platform) => cb(platform)),
+  onFullscreenChanged: (cb) => ipcRenderer.on('window-fullscreen', (_event, isFullscreen) => cb(isFullscreen)),
 });

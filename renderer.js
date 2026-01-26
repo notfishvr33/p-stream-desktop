@@ -107,3 +107,14 @@ window.windowControls.onMaximizedChanged((isMaximized) => {
 window.windowControls.onThemeColorChanged((color) => {
   applyThemeColor(color);
 });
+
+// Hide/show titlebar based on fullscreen state
+window.windowControls.onFullscreenChanged((isFullscreen) => {
+  if (titlebar) {
+    if (isFullscreen) {
+      titlebar.style.display = 'none';
+    } else {
+      titlebar.style.display = '';
+    }
+  }
+});

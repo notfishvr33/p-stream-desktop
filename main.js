@@ -27,6 +27,7 @@ function createWindow() {
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'logo.png'),
     backgroundColor: '#1f2025',
+    fullscreenable: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -49,6 +50,8 @@ function createWindow() {
 
   // Remove the menu entirely
   mainWindow.setMenu(null);
+  // Ensure menu bar is hidden (especially important for fullscreen)
+  mainWindow.setMenuBarVisibility(false);
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
@@ -87,7 +90,14 @@ function createWindow() {
 
   const resizeView = () => {
     const { width, height } = mainWindow.getContentBounds();
-    view.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: height - TITLE_BAR_HEIGHT });
+    const isFullscreen = mainWindow.isFullScreen();
+    // In fullscreen, BrowserView should fill the entire window (titlebar is hidden)
+    // Otherwise, start below the titlebar
+    if (isFullscreen) {
+      view.setBounds({ x: 0, y: 0, width, height });
+    } else {
+      view.setBounds({ x: 0, y: TITLE_BAR_HEIGHT, width, height: height - TITLE_BAR_HEIGHT });
+    }
   };
 
   resizeView();
@@ -96,6 +106,117 @@ function createWindow() {
   mainWindow.on('resize', resizeView);
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false));
+
+  // Aggressively hide menu bar in fullscreen - set up interval to continuously check
+  let fullscreenMenuBarInterval = null;
+
+  const hideMenuBarInFullscreen = () => {
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setMenuBarVisibility(false);
+      mainWindow.setMenu(null);
+    }
+  };
+
+  // Hide menu bar when entering fullscreen
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setMenu(null);
+    // Notify renderer to hide titlebar
+    mainWindow.webContents.send('window-fullscreen', true);
+    // Resize BrowserView to fill entire window
+    resizeView();
+    // Continuously check and hide menu bar while in fullscreen
+    if (fullscreenMenuBarInterval) {
+      clearInterval(fullscreenMenuBarInterval);
+    }
+    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 100);
+  });
+
+  // Keep menu bar hidden when leaving fullscreen (since menu is null anyway)
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setMenu(null);
+    // Notify renderer to show titlebar
+    mainWindow.webContents.send('window-fullscreen', false);
+    // Resize BrowserView to account for titlebar
+    resizeView();
+    // Stop the interval when leaving fullscreen
+    if (fullscreenMenuBarInterval) {
+      clearInterval(fullscreenMenuBarInterval);
+      fullscreenMenuBarInterval = null;
+    }
+  });
+
+  // Handle fullscreen requests from BrowserView (web content)
+  view.webContents.on('enter-html-full-screen', () => {
+    // Make the main window go fullscreen when web content requests it
+    mainWindow.setFullScreen(true);
+    // Force menu bar to be hidden immediately and repeatedly
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setMenu(null);
+    // Notify renderer to hide titlebar
+    mainWindow.webContents.send('window-fullscreen', true);
+    // Resize BrowserView to fill entire window
+    setTimeout(() => resizeView(), 0);
+    setTimeout(() => resizeView(), 50);
+    // Use multiple timeouts to ensure it sticks
+    setTimeout(() => {
+      mainWindow.setMenuBarVisibility(false);
+      mainWindow.setMenu(null);
+    }, 0);
+    setTimeout(() => {
+      mainWindow.setMenuBarVisibility(false);
+      mainWindow.setMenu(null);
+    }, 50);
+    setTimeout(() => {
+      mainWindow.setMenuBarVisibility(false);
+      mainWindow.setMenu(null);
+    }, 100);
+    setTimeout(() => {
+      mainWindow.setMenuBarVisibility(false);
+      mainWindow.setMenu(null);
+    }, 200);
+    // Start interval to continuously check
+    if (fullscreenMenuBarInterval) {
+      clearInterval(fullscreenMenuBarInterval);
+    }
+    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 100);
+  });
+
+  view.webContents.on('leave-html-full-screen', () => {
+    // Exit fullscreen when web content exits fullscreen
+    mainWindow.setFullScreen(false);
+    // Keep menu bar hidden
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setMenu(null);
+    // Notify renderer to show titlebar
+    mainWindow.webContents.send('window-fullscreen', false);
+    // Resize BrowserView to account for titlebar
+    setTimeout(() => resizeView(), 0);
+    setTimeout(() => resizeView(), 50);
+    // Stop the interval
+    if (fullscreenMenuBarInterval) {
+      clearInterval(fullscreenMenuBarInterval);
+      fullscreenMenuBarInterval = null;
+    }
+  });
+
+  // Also listen for various window events to ensure menu bar stays hidden
+  mainWindow.on('will-resize', () => {
+    hideMenuBarInFullscreen();
+  });
+
+  mainWindow.on('will-move', () => {
+    hideMenuBarInFullscreen();
+  });
+
+  // Clean up interval when window is closed
+  mainWindow.on('closed', () => {
+    if (fullscreenMenuBarInterval) {
+      clearInterval(fullscreenMenuBarInterval);
+      fullscreenMenuBarInterval = null;
+    }
+  });
 
   // Get the saved stream URL or use default
   const streamUrl = store ? store.get('streamUrl', 'pstream.mov') : 'pstream.mov';
@@ -312,6 +433,8 @@ function createWindow() {
     mainWindow.webContents.send('title-changed', mainWindow.getTitle());
     mainWindow.webContents.send('window-maximized', mainWindow.isMaximized());
     mainWindow.webContents.send('platform-changed', platform);
+    // Send initial fullscreen state
+    mainWindow.webContents.send('window-fullscreen', mainWindow.isFullScreen());
   });
 
   // Optional: Open DevTools
