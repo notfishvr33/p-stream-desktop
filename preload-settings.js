@@ -1,0 +1,16 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('settings', {
+  // WARP VPN
+  getWarpEnabled: () => ipcRenderer.invoke('get-warp-enabled'),
+  setWarpEnabled: (enabled) => ipcRenderer.invoke('set-warp-enabled', enabled),
+  getWarpStatus: () => ipcRenderer.invoke('get-warp-status'),
+  // Discord RPC
+  getDiscordRPCEnabled: () => ipcRenderer.invoke('get-discord-rpc-enabled'),
+  setDiscordRPCEnabled: (enabled) => ipcRenderer.invoke('set-discord-rpc-enabled', enabled),
+  // Version and updates
+  getVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('checkForUpdates'),
+  installUpdate: () => ipcRenderer.invoke('installUpdate'),
+  openReleasesPage: () => ipcRenderer.invoke('openReleasesPage'),
+});

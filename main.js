@@ -13,6 +13,9 @@ let store = null;
 // Control panel window reference
 let controlPanelWindow = null;
 
+// Settings window reference
+let settingsWindow = null;
+
 // BrowserView reference (for reset functionality)
 let mainBrowserView = null;
 
@@ -277,6 +280,24 @@ function createWindow() {
               font-size: 13px;
               color: #71717a;
             }
+            .settings-btn {
+              margin-top: 20px;
+              padding: 10px 20px;
+              background: #5865f2;
+              color: #ffffff;
+              border: none;
+              border-radius: 6px;
+              font-size: 14px;
+              font-weight: 500;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            }
+            .settings-btn:hover {
+              background: #4752c4;
+            }
+            .settings-btn:active {
+              background: #3c45a5;
+            }
           </style>
         </head>
         <body>
@@ -284,8 +305,9 @@ function createWindow() {
             <h1>Failed to connect</h1>
             <p>Could not load the page.</p>
             <p class="url">${displayUrl.replace(/</g, '&lt;')}</p>
-            <p class="hint">Try changing your DNS settings or use a VPN.</p>
-            <p class="hint" style="margin-top: 8px;">You can reload with Ctrl+R (or Cmd+R on Mac).</p>
+            <p class="hint">Try enabling Cloudflare WARP in settings.</p>
+            <button class="settings-btn" onclick="if(window.__PSTREAM_OPEN_SETTINGS__)window.__PSTREAM_OPEN_SETTINGS__()">Open Settings</button>
+            <p class="hint" style="margin-top: 16px;">You can reload with Ctrl+R (or Cmd+R on Mac).</p>
           </div>
         </body>
       </html>
@@ -545,7 +567,7 @@ function createControlPanelWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload-control-panel.js'),
     },
-    title: 'P-Stream Control Panel',
+    title: 'P-Stream Control Panel (DEVELOPERS ONLY)',
     show: false,
   });
 
@@ -1073,6 +1095,44 @@ ipcMain.on('window-maximize-toggle', (event) => {
 ipcMain.on('window-close', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) win.close();
+});
+
+ipcMain.on('open-settings', (event) => {
+  const parentWindow = BrowserWindow.fromWebContents(event.sender);
+  if (settingsWindow) {
+    settingsWindow.focus();
+    return;
+  }
+
+  const platform = process.env.PLATFORM_OVERRIDE || process.platform;
+  const isMac = platform === 'darwin';
+  const iconPath = path.join(__dirname, isMac ? 'app.icns' : 'logo.png');
+
+  settingsWindow = new BrowserWindow({
+    width: 500,
+    height: 400,
+    parent: parentWindow,
+    modal: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#1f2025',
+    icon: iconPath,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload-settings.js'),
+    },
+    title: 'Settings',
+  });
+
+  settingsWindow.setMenu(null);
+  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
 });
 
 ipcMain.on('theme-color', (event, color) => {

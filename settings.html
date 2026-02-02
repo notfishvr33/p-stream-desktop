@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P-Stream Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <div class="settings">
+      <div class="settings__header">
+        <h1 class="settings__title">Settings</h1>
+      </div>
+      <div class="settings__content">
+        <div class="settings__section">
+          <div class="settings__setting">
+            <div class="settings__setting-info">
+              <h3 class="settings__setting-title">App Version</h3>
+              <p class="settings__setting-description" id="version-text">Loading...</p>
+            </div>
+            <div class="settings__button-group">
+              <button id="update-now-btn" class="settings__button settings__button--primary" hidden>
+                Update now
+              </button>
+              <button id="check-updates-btn" class="settings__button">Check for Updates</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings__section">
+          <div class="settings__setting">
+            <div class="settings__setting-info">
+              <h3 class="settings__setting-title">Cloudflare WARP VPN</h3>
+              <p class="settings__setting-description">
+                Route traffic through Cloudflare WARP to bypass regional restrictions
+              </p>
+              <p class="settings__setting-status" id="warp-status"></p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="warp-toggle" class="toggle__input" />
+              <span class="toggle__slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="settings__section">
+          <div class="settings__setting">
+            <div class="settings__setting-info">
+              <h3 class="settings__setting-title">Discord Rich Presence</h3>
+              <p class="settings__setting-description">Show what you're watching on Discord</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="discord-rpc-toggle" class="toggle__input" />
+              <span class="toggle__slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="settings.js"></script>
+  </body>
+</html>

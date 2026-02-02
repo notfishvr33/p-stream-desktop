@@ -52,9 +52,14 @@ window.addEventListener('message', async (event) => {
 // Expose flag so the web app knows it's running in the desktop client
 contextBridge.exposeInMainWorld('__PSTREAM_DESKTOP__', true);
 
-// When the web app requests desktop settings (e.g. menu → Desktop), open the control panel
+// Expose function to open settings
+contextBridge.exposeInMainWorld('__PSTREAM_OPEN_SETTINGS__', () => {
+  ipcRenderer.send('open-settings');
+});
+
+// When the web app requests desktop settings (e.g. menu → Desktop), open the settings panel
 window.addEventListener('pstream-desktop-settings', () => {
-  ipcRenderer.invoke('openControlPanel');
+  ipcRenderer.send('open-settings');
 });
 
 console.log('P-Stream Desktop Preload Loaded');
