@@ -56,17 +56,17 @@
     ],
     "mac": {
       "category": "public.app-category.entertainment",
-      "icon": "logo.png"
+      "icon": "P-Stream.icon"
     },
     "win": {
-      "icon": "logo.png",
+      "icon": "P-Stream.png",
       "target": "nsis",
       "verifyUpdateCodeSignature": false,
       "requestedExecutionLevel": "asInvoker",
       "executableName": "P-Stream"
     },
     "linux": {
-      "icon": "logo.png",
+      "icon": "P-Stream.png",
       "target": "AppImage",
       "category": "AudioVideo"
     },
