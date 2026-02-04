@@ -6,6 +6,11 @@ const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
 
+// Paths relative to src/main/
+const ROOT = path.join(__dirname, '..', '..');
+const PRELOAD = path.join(__dirname, '..', 'preload');
+const UPDATER = path.join(__dirname, '..', 'updater');
+
 // GitHub repository configuration
 const GITHUB_OWNER = 'p-stream';
 const GITHUB_REPO = 'p-stream-desktop';
@@ -207,15 +212,15 @@ function createUpdaterWindow() {
     alwaysOnTop: true,
     skipTaskbar: false,
     backgroundColor: '#1f2025',
-    icon: path.join(__dirname, process.platform === 'darwin' ? 'app.icns' : 'logo.png'),
+    icon: path.join(ROOT, process.platform === 'darwin' ? 'app.icns' : 'logo.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload-updater.js'),
+      preload: path.join(PRELOAD, 'preload-updater.js'),
     },
   });
 
-  updaterWindow.loadFile(path.join(__dirname, 'updater.html'));
+  updaterWindow.loadFile(path.join(UPDATER, 'updater.html'));
 
   return updaterWindow;
 }

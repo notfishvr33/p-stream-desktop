@@ -7,6 +7,12 @@ const discordRPC = require('./discord-rpc');
 const { checkAndAutoUpdate } = require('./auto-updater');
 const warpProxy = require('./warp-proxy');
 
+// Paths relative to src/main/ (__dirname)
+const ROOT = path.join(__dirname, '..', '..');
+const PRELOAD = path.join(__dirname, '..', 'preload');
+const RENDERER = path.join(__dirname, '..', 'renderer');
+const SETTINGS = path.join(__dirname, '..', 'settings');
+
 // Settings store (will be initialized when app is ready)
 let store = null;
 
@@ -94,7 +100,7 @@ function createWindow() {
   // Allow platform override via environment variable for previewing different platforms
   const platform = process.env.PLATFORM_OVERRIDE || process.platform;
   const isMac = platform === 'darwin';
-  const iconPath = path.join(__dirname, isMac ? 'app.icns' : 'logo.png');
+  const iconPath = path.join(ROOT, isMac ? 'app.icns' : 'logo.png');
 
   // Configure window based on platform
   const windowOptions = {
@@ -107,7 +113,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload-titlebar.js'),
+      preload: path.join(PRELOAD, 'preload-titlebar.js'),
     },
     title: 'P-Stream',
   };
@@ -129,14 +135,14 @@ function createWindow() {
   // Ensure menu bar is hidden (especially important for fullscreen)
   mainWindow.setMenuBarVisibility(false);
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadFile(path.join(RENDERER, 'index.html'));
 
   const view = new BrowserView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       persistSessionCookies: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(PRELOAD, 'preload.js'),
     },
   });
 
@@ -670,7 +676,7 @@ function openSettingsWindow(parentWindow = null) {
 
   const platform = process.env.PLATFORM_OVERRIDE || process.platform;
   const isMac = platform === 'darwin';
-  const iconPath = path.join(__dirname, isMac ? 'app.icns' : 'logo.png');
+  const iconPath = path.join(ROOT, isMac ? 'app.icns' : 'logo.png');
 
   settingsWindow = new BrowserWindow({
     width: 500,
@@ -686,14 +692,14 @@ function openSettingsWindow(parentWindow = null) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload-settings.js'),
+      preload: path.join(PRELOAD, 'preload-settings.js'),
     },
     title: 'Settings',
     show: false,
   });
 
   settingsWindow.setMenu(null);
-  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
+  settingsWindow.loadFile(path.join(SETTINGS, 'settings.html'));
 
   settingsWindow.once('ready-to-show', () => {
     settingsWindow.show();

@@ -10,13 +10,13 @@ export default [
   js.configs.recommended,
   {
     files: [
-      'main.js',
-      'ipc-handlers.js',
-      'storage.js',
+      'src/main/main.js',
+      'src/main/ipc-handlers.js',
+      'src/main/storage.js',
       'test.js',
-      'discord-rpc.js',
-      'auto-updater.js',
-      'warp-proxy.js',
+      'src/main/discord-rpc.js',
+      'src/main/auto-updater.js',
+      'src/main/warp-proxy.js',
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -36,7 +36,7 @@ export default [
     },
   },
   {
-    files: ['renderer.js', 'preload.js', 'settings.js', 'updater.js'],
+    files: ['src/renderer/renderer.js', 'src/preload/preload.js', 'src/settings/settings.js', 'src/updater/updater.js'],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module',
@@ -55,7 +55,7 @@ export default [
     },
   },
   {
-    files: ['preload.js', 'preload-*.js'],
+    files: ['src/preload/preload.js', 'src/preload/preload-*.js'],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'script',
