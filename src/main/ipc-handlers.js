@@ -17,28 +17,63 @@ function canAccessCookies(host) {
   return hostsWithCookiesAccess.some((regex) => regex.test(host));
 }
 
-const modifiableResponseHeaders = [
+const modifiableResponseHeaders = new Set([
   'access-control-allow-origin',
   'access-control-allow-methods',
   'access-control-allow-headers',
   'content-security-policy',
   'content-security-policy-report-only',
   'content-disposition',
-];
+]);
 
 // --- Dynamic Rules State ---
 // Map<ruleId, RuleObject>
 const activeRules = new Map();
 
+function compileRegex(pattern) {
+  if (!pattern || typeof pattern !== 'string') return null;
+  try {
+    return new RegExp(pattern);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeTargetDomains(domains) {
+  if (!Array.isArray(domains)) return null;
+  return domains.map((domain) => domain.toLowerCase());
+}
+
 function updateRule(rule) {
-  // If rule has removeRuleIds logic (not passed here usually, but extensions do), handle it?
-  // The extension sends the whole rule object to setDynamicRules.
-  // We just store it.
-  activeRules.set(rule.ruleId, rule);
+  const updatedRule = { ...rule };
+  updatedRule.__compiledTargetRegex = compileRegex(rule.targetRegex);
+  updatedRule.__normalizedTargetDomains = normalizeTargetDomains(rule.targetDomains);
+  activeRules.set(rule.ruleId, updatedRule);
 }
 
 function removeRule(ruleId) {
   activeRules.delete(ruleId);
+}
+
+function getMatchingRules(url, hostname) {
+  if (activeRules.size === 0) return [];
+  const hostnameLower = hostname ? hostname.toLowerCase() : null;
+  const matches = [];
+
+  for (const rule of activeRules.values()) {
+    let match = false;
+    if (hostnameLower && rule.__normalizedTargetDomains) {
+      if (rule.__normalizedTargetDomains.some((domain) => hostnameLower.includes(domain))) {
+        match = true;
+      }
+    }
+    if (!match && rule.__compiledTargetRegex && rule.__compiledTargetRegex.test(url)) {
+      match = true;
+    }
+    if (match) matches.push(rule);
+  }
+
+  return matches;
 }
 
 function getMakeFullUrl(url, body) {
@@ -123,7 +158,7 @@ const handlers = {
       const filteredResponseHeaders = {};
       if (body.responseHeaders) {
         Object.keys(body.responseHeaders).forEach((key) => {
-          if (modifiableResponseHeaders.includes(key.toLowerCase())) {
+          if (modifiableResponseHeaders.has(key.toLowerCase())) {
             filteredResponseHeaders[key] = body.responseHeaders[key];
           }
         });
@@ -215,14 +250,20 @@ function setupInterceptors(sess, options = {}) {
 
   sess.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
     let requestHeaders = details.requestHeaders;
+    let parsedHostname = null;
+    try {
+      parsedHostname = new URL(details.url).hostname;
+    } catch {
+      parsedHostname = null;
+    }
 
     // Add app identity header for the configured stream URL only (so the site knows it's in the app, not a browser)
     const getStreamHostname = options.getStreamHostname;
-    if (typeof getStreamHostname === 'function') {
+    if (typeof getStreamHostname === 'function' && parsedHostname) {
       try {
         const streamHostname = getStreamHostname();
         if (streamHostname) {
-          const requestHostname = new URL(details.url).hostname.replace(/^www\./, '');
+          const requestHostname = parsedHostname.replace(/^www\./, '');
           if (requestHostname === streamHostname.replace(/^www\./, '')) {
             requestHeaders['X-P-Stream-Client'] = 'desktop';
           }
@@ -232,33 +273,12 @@ function setupInterceptors(sess, options = {}) {
       }
     }
 
-    let modified = false;
-
-    // Check all active rules
-    for (const rule of activeRules.values()) {
-      // Check domain match
-      // rule.targetDomains (array of strings)
-      // rule.targetRegex (string)
-
-      let match = false;
-      const urlObj = new URL(details.url);
-      const hostname = urlObj.hostname;
-
-      if (rule.targetDomains && rule.targetDomains.some((d) => hostname.includes(d))) {
-        match = true;
-      }
-      if (rule.targetRegex && new RegExp(rule.targetRegex).test(details.url)) {
-        match = true;
-      }
-
-      if (match) {
-        // Apply requestHeaders
-        if (rule.requestHeaders) {
-          Object.entries(rule.requestHeaders).forEach(([name, value]) => {
-            requestHeaders[name] = value;
-            modified = true;
-          });
-        }
+    const matchingRules = getMatchingRules(details.url, parsedHostname);
+    for (const rule of matchingRules) {
+      if (rule.requestHeaders) {
+        Object.entries(rule.requestHeaders).forEach(([name, value]) => {
+          requestHeaders[name] = value;
+        });
       }
     }
 
@@ -268,33 +288,16 @@ function setupInterceptors(sess, options = {}) {
   sess.webRequest.onHeadersReceived(filter, (details, callback) => {
     let responseHeaders = { ...details.responseHeaders }; // Clone headers
 
-    // Check all active rules
-    let match = false;
-    let ruleMatches = [];
-
-    for (const rule of activeRules.values()) {
-      let ruleMatch = false;
-      try {
-        const urlObj = new URL(details.url);
-        const hostname = urlObj.hostname;
-
-        if (rule.targetDomains && rule.targetDomains.some((d) => hostname.includes(d))) {
-          ruleMatch = true;
-        }
-        if (rule.targetRegex && new RegExp(rule.targetRegex).test(details.url)) {
-          ruleMatch = true;
-        }
-      } catch {
-        // Ignore regex errors
-      }
-
-      if (ruleMatch) {
-        match = true;
-        ruleMatches.push(rule);
-      }
+    let parsedHostname = null;
+    try {
+      parsedHostname = new URL(details.url).hostname;
+    } catch {
+      parsedHostname = null;
     }
 
-    if (match) {
+    const ruleMatches = getMatchingRules(details.url, parsedHostname);
+
+    if (ruleMatches.length > 0) {
       // Helper to remove header case-insensitively
       const removeHeader = (name) => {
         const lowerName = name.toLowerCase();
