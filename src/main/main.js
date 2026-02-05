@@ -268,56 +268,37 @@ function createWindow() {
 
   // Handle fullscreen requests from BrowserView (web content)
   view.webContents.on('enter-html-full-screen', () => {
-    // Make the main window go fullscreen when web content requests it
     mainWindow.setFullScreen(true);
-    // Force menu bar to be hidden immediately and repeatedly
     mainWindow.setMenuBarVisibility(false);
     mainWindow.setMenu(null);
-    // Notify renderer to hide titlebar
     mainWindow.webContents.send('window-fullscreen', true);
-    // Resize BrowserView to fill entire window
     setTimeout(() => resizeView(), 0);
     setTimeout(() => resizeView(), 50);
-    // Use multiple timeouts to ensure it sticks
-    setTimeout(() => {
-      mainWindow.setMenuBarVisibility(false);
-      mainWindow.setMenu(null);
-    }, 0);
-    setTimeout(() => {
-      mainWindow.setMenuBarVisibility(false);
-      mainWindow.setMenu(null);
-    }, 50);
-    setTimeout(() => {
-      mainWindow.setMenuBarVisibility(false);
-      mainWindow.setMenu(null);
-    }, 100);
-    setTimeout(() => {
-      mainWindow.setMenuBarVisibility(false);
-      mainWindow.setMenu(null);
-    }, 200);
-    // Start interval to continuously check
+
     if (fullscreenMenuBarInterval) {
       clearInterval(fullscreenMenuBarInterval);
     }
     fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 100);
   });
 
-  view.webContents.on('leave-html-full-screen', () => {
-    // Exit fullscreen when web content exits fullscreen
+  // Extracted function to handle fullscreen exit
+  function exitFullscreen() {
     mainWindow.setFullScreen(false);
-    // Keep menu bar hidden
     mainWindow.setMenuBarVisibility(false);
     mainWindow.setMenu(null);
-    // Notify renderer to show titlebar
     mainWindow.webContents.send('window-fullscreen', false);
-    // Resize BrowserView to account for titlebar
     setTimeout(() => resizeView(), 0);
     setTimeout(() => resizeView(), 50);
-    // Stop the interval
+
     if (fullscreenMenuBarInterval) {
       clearInterval(fullscreenMenuBarInterval);
       fullscreenMenuBarInterval = null;
     }
+  }
+
+  // Handle fullscreen exit from both HTML fullscreen and window fullscreen events
+  view.webContents.on('leave-html-full-screen', () => {
+    exitFullscreen();
   });
 
   // Also listen for various window events to ensure menu bar stays hidden
