@@ -5,14 +5,14 @@ import { makeUrlIntoDomain } from '~utils/domains';
 
 export const DEFAULT_DOMAIN_WHITELIST = [];
 
-export const modifiableResponseHeaders = [
+export const modifiableResponseHeaders = new Set([
   'access-control-allow-origin',
   'access-control-allow-methods',
   'access-control-allow-headers',
   'content-security-policy',
   'content-security-policy-report-only',
   'content-disposition',
-];
+]);
 
 const hostsWithCookiesAccess: RegExp[] = [
   /^(?:.*\.)?ee3\.me$/,

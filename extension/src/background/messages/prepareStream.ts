@@ -19,15 +19,14 @@ const handler: PlasmoMessaging.MessageHandler<Request, BaseResponse> = async (re
     if (!req.body) throw new Error('No request body found in the request.');
 
     // restrict what response headers can be modified
-    req.body.responseHeaders = Object.keys(req.body.responseHeaders ?? {})
-      .filter((key) => modifiableResponseHeaders.includes(key.toLowerCase()))
-      .reduce(
-        (obj, key) => {
-          obj[key] = (req.body?.responseHeaders ?? {})[key];
-          return obj;
-        },
-        {} as Record<string, string>,
-      );
+    const responseHeaders = req.body.responseHeaders ?? {};
+    const filteredResponseHeaders: Record<string, string> = {};
+    Object.entries(responseHeaders).forEach(([key, value]) => {
+      if (modifiableResponseHeaders.has(key.toLowerCase())) {
+        filteredResponseHeaders[key] = value;
+      }
+    });
+    req.body.responseHeaders = filteredResponseHeaders;
 
     await assertDomainWhitelist(req.sender.tab.url);
     await setDynamicRules(req.body);

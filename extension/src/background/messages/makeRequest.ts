@@ -54,15 +54,16 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response<any>> = async (r
     if (!req.body) throw new Error('No request body found in the request.');
 
     const url = makeFullUrl(req.body.url, req.body);
+    const targetHostname = new URL(url).hostname;
     await assertDomainWhitelist(req.sender.tab.url);
 
     await setDynamicRules({
       ruleId: MAKE_REQUEST_DYNAMIC_RULE,
-      targetDomains: [new URL(url).hostname],
+      targetDomains: [targetHostname],
       requestHeaders: req.body.headers,
       // set Access-Control-Allow-Credentials if the reqested host has access to cookies
       responseHeaders: {
-        ...(canAccessCookies(new URL(url).hostname) && {
+        ...(canAccessCookies(targetHostname) && {
           'Access-Control-Allow-Credentials': 'true',
         }),
       },
@@ -77,10 +78,11 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response<any>> = async (r
     const contentType = response.headers.get('content-type');
     const body = contentType?.includes('application/json') ? await response.json() : await response.text();
 
+    const responseHostname = new URL(response.url).hostname;
     const cookies = await (chrome || browser).cookies.getAll({
       url: response.url,
       ...(isFirefox() && {
-        firstPartyDomain: new URL(response.url).hostname,
+        firstPartyDomain: responseHostname,
       }),
     });
 
@@ -91,7 +93,7 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response<any>> = async (r
         headers: {
           ...Object.fromEntries(response.headers.entries()),
           // include cookies if allowed for the reqested host
-          ...(canAccessCookies(new URL(url).hostname) && {
+          ...(canAccessCookies(targetHostname) && {
             'Set-Cookie': cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(', '),
           }),
         },

@@ -248,7 +248,7 @@ function createWindow() {
     if (fullscreenMenuBarInterval) {
       clearInterval(fullscreenMenuBarInterval);
     }
-    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 100);
+    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 250);
   });
 
   // Keep menu bar hidden when leaving fullscreen (since menu is null anyway)
@@ -278,7 +278,7 @@ function createWindow() {
     if (fullscreenMenuBarInterval) {
       clearInterval(fullscreenMenuBarInterval);
     }
-    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 100);
+    fullscreenMenuBarInterval = setInterval(hideMenuBarInFullscreen, 250);
   });
 
   // Extracted function to handle fullscreen exit
@@ -604,6 +604,23 @@ function createWindow() {
         let lastProgress = null;
         let updateInterval = null;
 
+        const isSameMetadata = (a, b) => {
+          if (a === b) return true;
+          if (!a || !b) return false;
+          return a.title === b.title && a.artist === b.artist && a.poster === b.poster;
+        };
+
+        const isSameProgress = (a, b) => {
+          if (a === b) return true;
+          if (!a || !b) return false;
+          return (
+            a.currentTime === b.currentTime &&
+            a.duration === b.duration &&
+            a.isPlaying === b.isPlaying &&
+            a.playbackState === b.playbackState
+          );
+        };
+
         // Helper to convert relative URLs to absolute
         const getAbsoluteUrl = (url) => {
           if (!url) return null;
@@ -655,8 +672,8 @@ function createWindow() {
               playbackState
             };
 
-            const metadataChanged = JSON.stringify(currentMetadata) !== JSON.stringify(lastMetadata);
-            const progressChanged = JSON.stringify(currentProgress) !== JSON.stringify(lastProgress);
+            const metadataChanged = !isSameMetadata(currentMetadata, lastMetadata);
+            const progressChanged = !isSameProgress(currentProgress, lastProgress);
 
             if (metadataChanged || progressChanged) {
               lastMetadata = currentMetadata;
