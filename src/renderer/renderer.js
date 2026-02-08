@@ -50,6 +50,7 @@ window.windowControls.onPlatformChanged((platform) => {
   } else if (isLinux) {
     // Linux: Show custom buttons with chevron icons
     if (titlebar) titlebar.classList.add('titlebar--linux');
+    if (appIcon) appIcon.style.display = 'block';
     // Switch to Linux icons: chevron down for minimize, chevron up for maximize
     const minimizeIcon = minimizeBtn?.querySelector('svg');
     const maximizeIcon = maximizeBtn?.querySelector('.icon-max');
@@ -70,6 +71,7 @@ window.windowControls.onPlatformChanged((platform) => {
   } else {
     // Windows: Keep default Windows-style icons
     if (titlebar) titlebar.classList.add('titlebar--windows');
+    if (appIcon) appIcon.style.display = 'block';
   }
 
   // After platform is set, wait for page to load then restore theme color
