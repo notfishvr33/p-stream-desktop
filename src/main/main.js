@@ -730,14 +730,15 @@ function createWindow() {
     view.webContents.executeJavaScript(script).catch(console.error);
   };
 
-  // Right-click opens DevTools for the embedded page (injected so the page captures the event)
+  // Shift + Right-click opens DevTools for the embedded page (injected so the page captures the event)
   const injectDevToolsShortcut = () => {
     const script = `
       (function() {
         if (window.__PSTREAM_DEVTOOLS_SHORTCUT__) return;
         window.__PSTREAM_DEVTOOLS_SHORTCUT__ = true;
         document.addEventListener('contextmenu', function(e) {
-          if (window.__PSTREAM_OPEN_DEVTOOLS__) {
+          // Only trigger when Shift key is pressed
+          if (e.shiftKey && window.__PSTREAM_OPEN_DEVTOOLS__) {
             e.preventDefault();
             e.stopPropagation();
             window.__PSTREAM_OPEN_DEVTOOLS__();
