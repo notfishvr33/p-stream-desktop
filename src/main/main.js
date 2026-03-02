@@ -748,16 +748,119 @@ function createWindow() {
     view.webContents.executeJavaScript(script).catch(() => {});
   };
 
+  // Inject fix for subtitles not showing in fullscreen.
+  // In Electron's BrowserView, Chromium's "top layer" model means that subtitle overlay
+  // elements positioned outside the fullscreen element are not painted. This injection:
+  //   1. Adds CSS to ensure native <track>-based subtitle containers are always visible.
+  //   2. Listens for fullscreenchange and moves common subtitle container elements inside
+  //      the fullscreen element, then restores their original position on exit.
+  const injectSubtitleFullscreenFix = () => {
+    const script = `
+      (function() {
+        if (window.__pstreamSubtitleFixInjected) return;
+        window.__pstreamSubtitleFixInjected = true;
+
+        // --- CSS: ensure native WebVTT text-track containers are always visible ---
+        const style = document.createElement('style');
+        style.textContent = \`
+          video::-webkit-media-text-track-container,
+          video::-webkit-media-text-track-display,
+          video::-webkit-media-text-track-background,
+          video::cue {
+            display: block !important;
+            visibility: visible !important;
+            overflow: visible !important;
+          }
+        \`;
+        document.head.appendChild(style);
+
+        // --- JS: move custom subtitle overlays inside the fullscreen element ---
+        // Selectors covering common open-source and commercial video players.
+        const SUBTITLE_SELECTORS = [
+          '.vjs-text-track-display',          // Video.js
+          '.shaka-text-container',            // Shaka Player
+          '.plyr__captions',                  // Plyr
+          '.jw-captions',                     // JW Player
+          '.fp-captions',                     // Flowplayer
+          '.mejs-captions-layer',             // MediaElement.js
+          '.html5-video-subtitles',           // YouTube-style players
+          '[class*="subtitle-container"]',
+          '[class*="subtitles-container"]',
+          '[class*="caption-container"]',
+          '[class*="captions-container"]',
+          '[class*="text-track-container"]',
+        ];
+
+        // Map of moved elements -> { parent, nextSibling } for restoration
+        const movedElements = new Map();
+
+        const moveSubtitlesIntoFullscreen = (fsEl) => {
+          SUBTITLE_SELECTORS.forEach((selector) => {
+            try {
+              document.querySelectorAll(selector).forEach((el) => {
+                if (!fsEl.contains(el)) {
+                  movedElements.set(el, {
+                    parent: el.parentElement,
+                    nextSibling: el.nextSibling,
+                  });
+                  fsEl.appendChild(el);
+                }
+              });
+            } catch (e) {
+              // ignore invalid selectors on older runtimes
+            }
+          });
+        };
+
+        const restoreSubtitles = () => {
+          movedElements.forEach(({ parent, nextSibling }, el) => {
+            try {
+              if (parent) {
+                if (nextSibling && nextSibling.parentNode === parent) {
+                  parent.insertBefore(el, nextSibling);
+                } else {
+                  parent.appendChild(el);
+                }
+              }
+            } catch (e) {}
+          });
+          movedElements.clear();
+        };
+
+        document.addEventListener('fullscreenchange', () => {
+          if (document.fullscreenElement) {
+            moveSubtitlesIntoFullscreen(document.fullscreenElement);
+          } else {
+            restoreSubtitles();
+          }
+        });
+
+        // Also handle webkit-prefixed fullscreen (belt-and-suspenders for older Chromium)
+        document.addEventListener('webkitfullscreenchange', () => {
+          const fsEl = document.webkitFullscreenElement || document.fullscreenElement;
+          if (fsEl) {
+            moveSubtitlesIntoFullscreen(fsEl);
+          } else {
+            restoreSubtitles();
+          }
+        });
+      })();
+    `;
+    view.webContents.executeJavaScript(script).catch(console.error);
+  };
+
   // Inject media watcher when page loads
   view.webContents.on('did-finish-load', () => {
     injectMediaWatcher();
     injectDevToolsShortcut();
+    injectSubtitleFullscreenFix();
   });
 
   // Also inject on navigation
   view.webContents.on('did-navigate', () => {
     setTimeout(injectMediaWatcher, 1000);
     setTimeout(injectDevToolsShortcut, 100);
+    setTimeout(injectSubtitleFullscreenFix, 200);
   });
 
   // Update title when page title changes
