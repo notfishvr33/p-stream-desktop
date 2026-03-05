@@ -31,7 +31,15 @@ const SETTINGS = path.join(__dirname, '..', 'settings');
 const SETUP = path.join(__dirname, '..', 'setup');
 
 // Settings store (will be initialized when app is ready)
-let store = null;
+const store = new SimpleStore({
+  configName: 'user-preferences',
+  defaults: {
+    discordRPCEnabled: true,
+    hardwareAcceleration: true,
+    warpLaunchEnabled: false,
+    volumeBoost: 1.0,
+  },
+});
 
 // Settings window reference
 let settingsWindow = null;
@@ -1221,16 +1229,6 @@ app.whenReady().then(async () => {
     // Update is being installed, app is quitting
     return;
   }
-
-  // Initialize settings store (after app is ready so app.getPath works)
-  store = new SimpleStore({
-    defaults: {
-      discordRPCEnabled: true,
-      hardwareAcceleration: true,
-      warpLaunchEnabled: false,
-      volumeBoost: 1.0,
-    },
-  });
 
   // Initialize Discord RPC
   discordRPC.initialize(store);
